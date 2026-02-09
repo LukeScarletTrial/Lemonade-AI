@@ -1,0 +1,5 @@
+{
+  "name": "Lemonade AI",
+  "description": "A web-based IDE with integrated Gemini AI for agentic coding and rapid prototyping.",
+  "requestFramePermissions": []
+}

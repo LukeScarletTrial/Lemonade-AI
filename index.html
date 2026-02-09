@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lemonade AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://js.puter.com/v2/"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              ide: {
+                bg: '#1e1e1e',
+                sidebar: '#252526',
+                activity: '#333333',
+                header: '#3c3c3c',
+                border: '#454545',
+                hover: '#2a2d2e',
+                accent: '#007fd4',
+                text: '#cccccc',
+                textMain: '#ffffff'
+              }
+            },
+            fontFamily: {
+              mono: ['Menlo', 'Monaco', 'Courier New', 'monospace']
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      /* Custom scrollbar for IDE feel */
+      ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #1e1e1e;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #424242;
+        border-radius: 5px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #4f4f4f;
+      }
+      body {
+        background-color: #1e1e1e;
+        color: #cccccc;
+        overflow: hidden;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "lucide-react": "https://esm.sh/lucide-react@^0.563.0",
+    "@google/genai": "https://esm.sh/@google/genai@^1.40.0",
+    "react": "https://esm.sh/react@^19.2.4",
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "firebase/app": "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js",
+    "firebase/auth": "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js",
+    "firebase/": "https://esm.sh/firebase@^12.9.0/"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
