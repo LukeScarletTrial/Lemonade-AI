@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Plus, Folder, Trash2, Code2, Search } from 'lucide-react';
+import { Plus, Folder, Trash2, Code2, Search, Zap, Server, FileCode } from 'lucide-react';
 import { ProjectMeta } from '../types';
 
 interface DashboardProps {
   projects: ProjectMeta[];
-  onCreateProject: (name: string) => void;
+  onCreateProject: (name: string, type: 'html' | 'react' | 'node') => void;
   onOpenProject: (id: string) => void;
   onDeleteProject: (id: string) => void;
   userEmail: string | null;
@@ -20,14 +20,16 @@ const Dashboard: React.FC<DashboardProps> = ({
   onSignOut
 }) => {
   const [newProjectName, setNewProjectName] = useState('');
+  const [newProjectType, setNewProjectType] = useState<'html' | 'react' | 'node'>('html');
   const [isCreating, setIsCreating] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     if (newProjectName.trim()) {
-      onCreateProject(newProjectName.trim());
+      onCreateProject(newProjectName.trim(), newProjectType);
       setNewProjectName('');
+      setNewProjectType('html'); // reset
       setIsCreating(false);
     }
   };
@@ -35,6 +37,14 @@ const Dashboard: React.FC<DashboardProps> = ({
   const filteredProjects = projects
     .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
     .sort((a, b) => b.lastModified - a.lastModified);
+
+  const getIcon = (type?: string) => {
+      switch(type) {
+          case 'react': return <Zap size={20} className="text-blue-400" />;
+          case 'node': return <Server size={20} className="text-green-400" />;
+          default: return <FileCode size={20} className="text-yellow-400" />;
+      }
+  };
 
   return (
     <div className="h-screen w-screen bg-ide-bg text-ide-textMain flex flex-col overflow-hidden">
@@ -87,14 +97,41 @@ const Dashboard: React.FC<DashboardProps> = ({
               <div className="bg-ide-sidebar border border-ide-border p-6 rounded-lg shadow-2xl w-96">
                 <h3 className="text-lg font-bold mb-4">Create New Project</h3>
                 <form onSubmit={handleCreate}>
+                  <label className="block text-xs uppercase text-ide-text mb-1">Project Name</label>
                   <input 
                     type="text" 
                     autoFocus
-                    placeholder="Project Name (e.g., My Awesome App)"
+                    placeholder="e.g., My Awesome App"
                     value={newProjectName}
                     onChange={(e) => setNewProjectName(e.target.value)}
-                    className="w-full bg-ide-activity border border-ide-border rounded p-2 text-sm mb-4 focus:border-ide-accent outline-none"
+                    className="w-full bg-ide-activity border border-ide-border rounded p-2 text-sm mb-4 focus:border-ide-accent outline-none text-white"
                   />
+                  
+                  <label className="block text-xs uppercase text-ide-text mb-1">Template</label>
+                  <div className="grid grid-cols-3 gap-2 mb-6">
+                      <button
+                        type="button"
+                        onClick={() => setNewProjectType('html')}
+                        className={`p-2 rounded border flex flex-col items-center gap-1 text-xs ${newProjectType === 'html' ? 'border-ide-accent bg-ide-activity text-white' : 'border-ide-border text-ide-text hover:bg-ide-hover'}`}
+                      >
+                          <FileCode size={16} /> HTML
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNewProjectType('react')}
+                        className={`p-2 rounded border flex flex-col items-center gap-1 text-xs ${newProjectType === 'react' ? 'border-ide-accent bg-ide-activity text-white' : 'border-ide-border text-ide-text hover:bg-ide-hover'}`}
+                      >
+                          <Zap size={16} /> React
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNewProjectType('node')}
+                        className={`p-2 rounded border flex flex-col items-center gap-1 text-xs ${newProjectType === 'node' ? 'border-ide-accent bg-ide-activity text-white' : 'border-ide-border text-ide-text hover:bg-ide-hover'}`}
+                      >
+                          <Server size={16} /> Node.js
+                      </button>
+                  </div>
+
                   <div className="flex justify-end gap-3">
                     <button 
                       type="button"
@@ -125,8 +162,8 @@ const Dashboard: React.FC<DashboardProps> = ({
                 className="group bg-ide-sidebar border border-ide-border hover:border-ide-accent rounded-lg p-4 cursor-pointer transition-all hover:shadow-lg relative"
               >
                 <div className="flex items-start justify-between mb-3">
-                  <div className="p-2 bg-ide-activity rounded-md text-yellow-400 group-hover:text-white group-hover:bg-ide-accent transition-colors">
-                    <Code2 size={20} />
+                  <div className="p-2 bg-ide-activity rounded-md group-hover:bg-ide-bg transition-colors">
+                    {getIcon(project.type)}
                   </div>
                   <button 
                     onClick={(e) => { e.stopPropagation(); onDeleteProject(project.id); }}
@@ -138,9 +175,12 @@ const Dashboard: React.FC<DashboardProps> = ({
                 </div>
                 
                 <h3 className="font-semibold text-lg truncate mb-1">{project.name}</h3>
-                <p className="text-xs text-ide-text opacity-60">
-                  Last modified: {new Date(project.lastModified).toLocaleDateString()}
-                </p>
+                <div className="flex justify-between items-center mt-2">
+                    <span className="text-[10px] bg-ide-activity px-1.5 py-0.5 rounded text-ide-text uppercase">{project.type || 'HTML'}</span>
+                    <p className="text-xs text-ide-text opacity-60">
+                    {new Date(project.lastModified).toLocaleDateString()}
+                    </p>
+                </div>
               </div>
             ))}
 

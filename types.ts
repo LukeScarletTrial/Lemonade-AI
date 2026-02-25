@@ -43,8 +43,17 @@ export interface AIConfig {
   apiKey: string;
 }
 
+export interface Commit {
+  id: string;
+  message: string;
+  timestamp: number;
+  files: FileSystemItem[];
+}
+
 export interface ProjectMeta {
   id: string;
   name: string;
+  type?: 'html' | 'react' | 'node'; // Added project type
   lastModified: number;
+  commits?: Commit[]; // Added for Git support
 }

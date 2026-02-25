@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { PanelLeft, Play, LogOut, Save, Code, Eye, FileCode, ArrowLeft } from 'lucide-react';
+import { PanelLeft, Play, LogOut, Save, Code, Eye, FileCode, ArrowLeft, Download, GitBranch } from 'lucide-react';
 import { auth } from './firebase';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
-import { FileSystemItem, ChatMessage, AIResponseSchema, AIProvider, ProjectMeta } from './types';
-import { INITIAL_FILES } from './constants';
+import { FileSystemItem, ChatMessage, AIResponseSchema, AIProvider, ProjectMeta, Commit } from './types';
+import { INITIAL_FILES, REACT_TEMPLATE, NODE_TEMPLATE } from './constants';
 import { generateCodeChanges } from './services/aiService';
 import FileExplorer from './components/FileExplorer';
 import CodeEditor from './components/CodeEditor';
@@ -11,6 +11,8 @@ import Preview from './components/Preview';
 import AIChat from './components/AIChat';
 import Auth from './components/Auth';
 import Dashboard from './components/Dashboard';
+import SourceControl from './components/SourceControl';
+import { exportProjectAsZip } from './utils/exportUtils';
 
 const App: React.FC = () => {
   // --- Auth State ---
@@ -24,7 +26,9 @@ const App: React.FC = () => {
   // --- Editor State ---
   const [files, setFiles] = useState<FileSystemItem[]>(INITIAL_FILES);
   const [activeFileId, setActiveFileId] = useState<string | null>('index-html');
+  
   const [showSidebar, setShowSidebar] = useState(true);
+  const [activeSidebarTab, setActiveSidebarTab] = useState<'files' | 'git'>('files');
   
   // View Mode: 'code' or 'preview'
   const [viewMode, setViewMode] = useState<'code' | 'preview'>('code');
@@ -35,6 +39,7 @@ const App: React.FC = () => {
   const [logs, setLogs] = useState<string[]>(['Lemonade AI initialized.']);
   const [previewRefresh, setPreviewRefresh] = useState(0);
   const [lastSaved, setLastSaved] = useState<number | null>(null);
+  const [commits, setCommits] = useState<Commit[]>([]);
 
   // --- Initialization & Migration ---
   useEffect(() => {
@@ -84,24 +89,30 @@ const App: React.FC = () => {
 
   // --- Project Actions ---
 
-  const handleCreateProject = (name: string) => {
+  const handleCreateProject = (name: string, type: 'html' | 'react' | 'node' = 'html') => {
     const newId = `proj-${Date.now()}`;
     const newProject: ProjectMeta = {
         id: newId,
         name: name,
-        lastModified: Date.now()
+        type: type,
+        lastModified: Date.now(),
+        commits: []
     };
 
     const newProjectList = [...projects, newProject];
     setProjects(newProjectList);
     localStorage.setItem('lemonade_projects_list', JSON.stringify(newProjectList));
 
-    // Init files
-    const defaultFiles = INITIAL_FILES;
+    // Init files based on template
+    let defaultFiles = INITIAL_FILES;
+    if (type === 'react') defaultFiles = REACT_TEMPLATE;
+    if (type === 'node') defaultFiles = NODE_TEMPLATE;
+
     localStorage.setItem(`lemonade_project_${newId}`, JSON.stringify(defaultFiles));
     
     // Open it
     setFiles(defaultFiles);
+    setCommits([]);
     setMessages([]);
     setLogs(['Project created.']);
     setActiveProjectId(newId);
@@ -110,7 +121,9 @@ const App: React.FC = () => {
 
   const handleOpenProject = (id: string) => {
     const rawFiles = localStorage.getItem(`lemonade_project_${id}`);
-    if (rawFiles) {
+    const projectMeta = projects.find(p => p.id === id);
+
+    if (rawFiles && projectMeta) {
         try {
             const parsed = JSON.parse(rawFiles);
             setFiles(parsed);
@@ -119,9 +132,13 @@ const App: React.FC = () => {
             setLogs([`Opened project ${id}`]);
             setViewMode('code');
             setIsFullScreenPreview(false);
+            setCommits(projectMeta.commits || []);
             
             // Set default active file if exists
-            const indexFile = parsed.find((f: FileSystemItem) => f.name === 'index.html');
+            let indexFile = parsed.find((f: FileSystemItem) => f.name === 'index.html');
+            if (projectMeta.type === 'react' || projectMeta.type === 'node') {
+                indexFile = parsed.find((f: FileSystemItem) => f.name === 'App.jsx' || f.name === 'index.js');
+            }
             if (indexFile) setActiveFileId(indexFile.id);
             else if (parsed.length > 0) setActiveFileId(parsed[0].id);
 
@@ -162,15 +179,21 @@ const App: React.FC = () => {
     // Save Files
     localStorage.setItem(`lemonade_project_${activeProjectId}`, JSON.stringify(files));
     
-    // Update Meta
+    // Update Meta (including commits)
     const updatedProjects = projects.map(p => 
-        p.id === activeProjectId ? { ...p, lastModified: Date.now() } : p
+        p.id === activeProjectId ? { ...p, lastModified: Date.now(), commits: commits } : p
     );
     setProjects(updatedProjects);
     localStorage.setItem('lemonade_projects_list', JSON.stringify(updatedProjects));
 
     setLastSaved(Date.now());
     addLog("Project saved.");
+  };
+
+  const handleExport = () => {
+      const currentProjectName = projects.find(p => p.id === activeProjectId)?.name || 'project';
+      exportProjectAsZip(currentProjectName, files);
+      addLog("Exported project to ZIP.");
   };
 
   const handleFileClick = (id: string) => {
@@ -248,6 +271,27 @@ const App: React.FC = () => {
 
   const handleSignOut = () => {
     signOut(auth);
+  };
+
+  // --- Git Actions ---
+  const handleCommit = (message: string) => {
+      const newCommit: Commit = {
+          id: `commit-${Date.now()}`,
+          message,
+          timestamp: Date.now(),
+          files: JSON.parse(JSON.stringify(files)) // Deep copy
+      };
+      setCommits(prev => [...prev, newCommit]);
+      addLog(`Committed: ${message}`);
+      handleSaveProject();
+  };
+
+  const handleRestore = (commit: Commit) => {
+      if (window.confirm(`Restore state to "${commit.message}"? Unsaved changes will be lost.`)) {
+          setFiles(JSON.parse(JSON.stringify(commit.files))); // Deep copy
+          setPreviewRefresh(prev => prev + 1);
+          addLog(`Restored commit: ${commit.message}`);
+      }
   };
 
   // --- AI Logic ---
@@ -391,6 +435,13 @@ const App: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-4">
+            <button
+                onClick={handleExport}
+                className="flex items-center gap-1 text-xs text-ide-text hover:text-white transition-colors"
+                title="Download Project ZIP"
+            >
+                <Download size={14} /> Export
+            </button>
             <button 
                 onClick={handleRun}
                 className="flex items-center gap-2 px-3 py-1 bg-green-700 hover:bg-green-600 text-white rounded text-xs transition-colors"
@@ -405,16 +456,45 @@ const App: React.FC = () => {
         
         {/* Sidebar */}
         {showSidebar && (
-             <div className="w-64 shrink-0 flex flex-col transition-all duration-300 border-r border-ide-border">
-                <FileExplorer 
-                    files={files} 
-                    activeFileId={activeFileId} 
-                    onFileClick={handleFileClick}
-                    onDeleteFile={handleDeleteFile}
-                    onCreateFile={handleCreateFile}
-                    onUploadFiles={handleUploadFiles}
-                    onRenameFile={handleRenameFile}
-                />
+             <div className="w-64 shrink-0 flex flex-col transition-all duration-300 border-r border-ide-border bg-ide-sidebar">
+                {/* Sidebar Tabs */}
+                <div className="flex border-b border-ide-border">
+                    <button 
+                        onClick={() => setActiveSidebarTab('files')}
+                        className={`flex-1 py-2 text-xs flex justify-center hover:bg-ide-hover transition-colors ${activeSidebarTab === 'files' ? 'text-white border-b-2 border-ide-accent' : 'text-ide-text'}`}
+                        title="Explorer"
+                    >
+                        <FileCode size={16} />
+                    </button>
+                    <button 
+                        onClick={() => setActiveSidebarTab('git')}
+                        className={`flex-1 py-2 text-xs flex justify-center hover:bg-ide-hover transition-colors ${activeSidebarTab === 'git' ? 'text-white border-b-2 border-ide-accent' : 'text-ide-text'}`}
+                        title="Source Control"
+                    >
+                        <GitBranch size={16} />
+                    </button>
+                </div>
+
+                {/* Sidebar Content */}
+                <div className="flex-1 overflow-hidden">
+                    {activeSidebarTab === 'files' ? (
+                        <FileExplorer 
+                            files={files} 
+                            activeFileId={activeFileId} 
+                            onFileClick={handleFileClick}
+                            onDeleteFile={handleDeleteFile}
+                            onCreateFile={handleCreateFile}
+                            onUploadFiles={handleUploadFiles}
+                            onRenameFile={handleRenameFile}
+                        />
+                    ) : (
+                        <SourceControl 
+                            commits={commits}
+                            onCommit={handleCommit}
+                            onRestore={handleRestore}
+                        />
+                    )}
+                </div>
              </div>
         )}
 

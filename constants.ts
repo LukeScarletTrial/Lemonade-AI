@@ -89,6 +89,145 @@ button:hover {
   }
 ];
 
+export const REACT_TEMPLATE: FileSystemItem[] = [
+  { id: 'root', name: 'root', type: 'folder', isOpen: true },
+  {
+    id: 'pkg-json',
+    name: 'package.json',
+    type: 'file',
+    language: 'json',
+    parentId: 'root',
+    content: `{
+  "name": "react-app",
+  "version": "1.0.0",
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  }
+}`
+  },
+  {
+    id: 'index-html',
+    name: 'index.html',
+    type: 'file',
+    language: 'html',
+    parentId: 'root',
+    content: `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>React App</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel" src="index.jsx"></script>
+</body>
+</html>`
+  },
+  {
+    id: 'index-jsx',
+    name: 'index.jsx',
+    type: 'file',
+    language: 'javascript',
+    parentId: 'root',
+    content: `import React from 'react';
+import { createRoot } from 'react-dom/client';
+import App from './App';
+
+const container = document.getElementById('root');
+const root = createRoot(container);
+root.render(<App />);`
+  },
+  {
+    id: 'app-jsx',
+    name: 'App.jsx',
+    type: 'file',
+    language: 'javascript',
+    parentId: 'root',
+    content: `import React, { useState } from 'react';
+
+export default function App() {
+  const [count, setCount] = useState(0);
+
+  return (
+    <div style={{ textAlign: 'center', marginTop: '50px' }}>
+      <h1>🍋 React on Lemonade AI</h1>
+      <p>Count: {count}</p>
+      <button 
+        onClick={() => setCount(count + 1)}
+        style={{
+           padding: '10px 20px', 
+           fontSize: '16px', 
+           background: '#eab308', 
+           color: 'white', 
+           border: 'none', 
+           borderRadius: '5px',
+           cursor: 'pointer'
+        }}
+      >
+        Increment
+      </button>
+    </div>
+  );
+}`
+  }
+];
+
+export const NODE_TEMPLATE: FileSystemItem[] = [
+  { id: 'root', name: 'root', type: 'folder', isOpen: true },
+  {
+    id: 'pkg-json',
+    name: 'package.json',
+    type: 'file',
+    language: 'json',
+    parentId: 'root',
+    content: `{
+  "name": "node-server",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}`
+  },
+  {
+    id: 'index-js',
+    name: 'index.js',
+    type: 'file',
+    language: 'javascript',
+    parentId: 'root',
+    content: `const express = require('express');
+const app = express();
+const port = 3000;
+
+app.get('/', (req, res) => {
+  res.send('Hello from Lemonade Node.js!');
+});
+
+app.listen(port, () => {
+  console.log(\`Server running at http://localhost:\${port}\`);
+});`
+  },
+  {
+    id: 'readme',
+    name: 'README.md',
+    type: 'file',
+    language: 'markdown',
+    parentId: 'root',
+    content: `# Node.js Project
+
+This is a Node.js project template.
+Note: You cannot run a server directly in this browser IDE, 
+but you can write code, export it, and run it locally.`
+  }
+];
+
 export const SYSTEM_INSTRUCTION = `You are Lemonade AI, an expert coding assistant embedded in a web IDE.
 Your goal is to help users write, debug, and refactor code.
 You have the ability to CREATE, UPDATE, and DELETE files in the user's workspace.
